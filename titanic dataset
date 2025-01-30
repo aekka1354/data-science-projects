@@ -1,1 +1,135 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
+# %% [markdown]
+# ## 2. Load and Explore Data
+
+# %%
+# Load dataset
+titanic = sns.load_dataset('titanic')
+
+# Display first 5 rows
+print("First 5 rows:")
+display(titanic.head())
+
+# Dataset information
+print("\nDataset info:")
+titanic.info()
+
+# Statistical summary
+print("\nStatistical summary:")
+display(titanic.describe())
+
+# %% [markdown]
+# ## 3. Data Cleaning
+
+# %%
+# Check for missing values
+print("Missing values per column:")
+print(titanic.isnull().sum())
+
+# Drop unnecessary columns
+titanic_clean = titanic.drop(['deck', 'embark_town', 'alive', 'who', 'adult_male', 'class'], axis=1)
+
+# Fill missing age with median
+titanic_clean['age'] = titanic_clean['age'].fillna(titanic_clean['age'].median())
+
+# Fill missing embarked with mode
+titanic_clean['embarked'] = titanic_clean['embarked'].fillna(titanic_clean['embarked'].mode()[0])
+
+# Drop remaining missing values (only in 'embarked' column)
+titanic_clean = titanic_clean.dropna()
+
+# Verify cleaning
+print("\nMissing values after cleaning:")
+print(titanic_clean.isnull().sum())
+
+# %% [markdown]
+# ## 4. Exploratory Data Analysis (EDA)
+
+# %%
+# Set style for plots
+sns.set_style('whitegrid')
+
+# Survival count
+plt.figure(figsize=(8,5))
+sns.countplot(x='survived', data=titanic_clean)
+plt.title('Survival Count')
+plt.show()
+
+# Survival by sex
+plt.figure(figsize=(8,5))
+sns.countplot(x='survived', hue='sex', data=titanic_clean)
+plt.title('Survival by Gender')
+plt.show()
+
+# Age distribution
+plt.figure(figsize=(8,5))
+sns.histplot(titanic_clean['age'], bins=30, kde=True)
+plt.title('Age Distribution')
+plt.show()
+
+# Fare vs Survival
+plt.figure(figsize=(8,5))
+sns.boxplot(x='survived', y='fare', data=titanic_clean)
+plt.title('Fare Distribution by Survival')
+plt.show()
+
+# Correlation heatmap
+plt.figure(figsize=(10,6))
+sns.heatmap(titanic_clean.corr(numeric_only=True), annot=True, cmap='coolwarm')
+plt.title('Correlation Matrix')
+plt.show()
+
+# %% [markdown]
+# ## 5. Feature Engineering
+
+# %%
+# Convert categorical variables
+titanic_final = pd.get_dummies(titanic_clean, columns=['sex', 'embarked', 'alone'], drop_first=True)
+
+# Drop unnecessary columns
+titanic_final = titanic_final.drop(['pclass', 'sibsp', 'parch', 'fare'], axis=1)
+
+# Display modified dataframe
+print("Modified DataFrame:")
+display(titanic_final.head())
+
+# %% [markdown]
+# ## 6. Model Training
+
+# %%
+# Prepare data for modeling
+X = titanic_final.drop('survived', axis=1)
+y = titanic_final['survived']
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Initialize and train model
+logreg = LogisticRegression(max_iter=1000)
+logreg.fit(X_train, y_train)
+
+# %% [markdown]
+# ## 7. Model Evaluation
+
+# %%
+# Make predictions
+y_pred = logreg.predict(X_test)
+
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Model Accuracy: {accuracy:.2%}")
+
+# Confusion matrix
+plt.figure(figsize=(6,4))
+sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt='d', cmap='Blues')
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
